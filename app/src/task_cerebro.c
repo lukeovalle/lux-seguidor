@@ -73,9 +73,25 @@ void task_cerebro_update(void *parameters)
 	shared_data_type * shared_data = (shared_data_type *) parameters;
 
 	bool * ojos = shared_data->ojos;
+	piernas_state_t * estado_piernas = &shared_data->estado_piernas;
+	bool * actualizar_piernas = &shared_data->actualizar_piernas;
 
-	for (int i = 0; i < OJOS_MAX; i++) {
-		LOGGER_INFO("ojo %d: %d", i, ojos[i]);
+	if (ojos[1] && !ojos[2]) {
+		*estado_piernas = STATE_TURN_LEFT;
+		*actualizar_piernas = true;
+		LOGGER_INFO("GIRAR IZQ");
+	} else if (!ojos[1] && ojos[2]) {
+		*estado_piernas = STATE_TURN_RIGHT;
+		*actualizar_piernas = true;
+		LOGGER_INFO("GIRAR DER");
+	} else if (ojos[1] && ojos[2]) {
+		*estado_piernas = STATE_FORWARD;
+		*actualizar_piernas = true;
+		LOGGER_INFO("AVANZAR");
+	} else {
+		*estado_piernas = STATE_STOP;
+		*actualizar_piernas = true;
+		LOGGER_INFO("PARAR");
 	}
 }
 
