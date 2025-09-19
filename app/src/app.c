@@ -62,7 +62,8 @@ typedef struct {
 									// 'void (void *)' function)
 	void (*task_update)(void *);	// Pointer to task (must be a
 									// 'void (void *)' function)
-	void *parameters;				// Pointer to parameters
+	void * parameters;				// Pointer to parameters
+	char * name;					// Name of the task
 } task_cfg_t;
 
 typedef struct {
@@ -70,13 +71,19 @@ typedef struct {
 } task_dta_t;
 
 /********************** internal data declaration ****************************/
+char name_task_ojos[]		= "Tarea ojos";
+char name_task_cerebro[]	= "Tarea cerebro";
+char name_task_pies[]		= "Tarea pies";
 
 shared_data_type shared_data;
 
 const task_cfg_t task_cfg_list[]	= {
-		{.task_init = task_ojos_init, 	 .task_update = task_ojos_update, 	 .parameters =	&shared_data},
-		{.task_init = task_piernas_init, .task_update = task_piernas_update, .parameters = 	&shared_data},
-		{.task_init = task_cerebro_init, .task_update =	task_cerebro_update, .parameters = 	&shared_data}
+		{.task_init = task_ojos_init, 	 .task_update = task_ojos_update,
+				.parameters = &shared_data, .name = name_task_ojos },
+		{.task_init = task_piernas_init, .task_update = task_piernas_update,
+				.parameters = &shared_data, .name = name_task_pies },
+		{.task_init = task_cerebro_init, .task_update =	task_cerebro_update,
+				.parameters = &shared_data, .name = name_task_cerebro }
 };
 
 #define TASK_QTY	(sizeof(task_cfg_list)/sizeof(task_cfg_t))
@@ -172,7 +179,7 @@ void app_update(void)
 				task_dta_list[index].WCET = cycle_counter_time_us;
 
                 LOGGER_INFO("WCET for %s\t=%lu us",
-                        GET_NAME(task_cfg_list[index].task_update),
+                        task_cfg_list[index].name,
                         task_dta_list[index].WCET);
 			}
 		}
