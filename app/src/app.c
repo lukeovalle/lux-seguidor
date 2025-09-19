@@ -170,6 +170,10 @@ void app_update(void)
 			if (task_dta_list[index].WCET < cycle_counter_time_us)
 			{
 				task_dta_list[index].WCET = cycle_counter_time_us;
+
+                LOGGER_INFO("WCET for %s\t=%lu us",
+                        GET_NAME(task_cfg_list[index].task_update),
+                        task_dta_list[index].WCET);
 			}
 		}
 
