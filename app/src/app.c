@@ -73,7 +73,7 @@ typedef struct {
 /********************** internal data declaration ****************************/
 char name_task_ojos[]		= "Tarea ojos";
 char name_task_cerebro[]	= "Tarea cerebro";
-char name_task_pies[]		= "Tarea pies";
+char name_task_piernas[]	= "Tarea piernas";
 
 shared_data_type shared_data;
 
@@ -81,7 +81,7 @@ const task_cfg_t task_cfg_list[]	= {
 		{.task_init = task_ojos_init, 	 .task_update = task_ojos_update,
 				.parameters = &shared_data, .name = name_task_ojos },
 		{.task_init = task_piernas_init, .task_update = task_piernas_update,
-				.parameters = &shared_data, .name = name_task_pies },
+				.parameters = &shared_data, .name = name_task_piernas },
 		{.task_init = task_cerebro_init, .task_update =	task_cerebro_update,
 				.parameters = &shared_data, .name = name_task_cerebro }
 };

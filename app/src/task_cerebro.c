@@ -53,6 +53,7 @@
 /********************** internal data declaration ****************************/
 
 /********************** internal functions declaration ***********************/
+float calcular_pid(bool ojos[]);
 
 /********************** internal data definition *****************************/
 const char *p_task_c 		= "Task Cerebro";
@@ -66,6 +67,11 @@ void task_cerebro_init(void *parameters)
 	/* Print out: Task Initialized */
 	LOGGER_INFO(" ");
 	LOGGER_INFO("  %s is running - %s", GET_NAME(task_c_init), p_task_c);
+
+	shared_data_type * shared_data = (shared_data_type *) parameters;
+
+	shared_data->estado_piernas = STATE_STOP;
+	shared_data->actualizar_piernas = false;
 }
 
 void task_cerebro_update(void *parameters)
@@ -76,23 +82,48 @@ void task_cerebro_update(void *parameters)
 	piernas_state_t * estado_piernas = &shared_data->estado_piernas;
 	bool * actualizar_piernas = &shared_data->actualizar_piernas;
 
-	if (ojos[1] && !ojos[2]) {
+	float valor_pid = calcular_pid(ojos);
+	LOGGER_INFO("PID = %f", valor_pid);
+
+	if (valor_pid < 0) {
 		*estado_piernas = STATE_TURN_LEFT;
 		*actualizar_piernas = true;
 		LOGGER_INFO("GIRAR IZQ");
-	} else if (!ojos[1] && ojos[2]) {
-		*estado_piernas = STATE_TURN_RIGHT;
-		*actualizar_piernas = true;
-		LOGGER_INFO("GIRAR DER");
-	} else if (ojos[1] && ojos[2]) {
+	} else if (valor_pid == 0) {
 		*estado_piernas = STATE_FORWARD;
 		*actualizar_piernas = true;
 		LOGGER_INFO("AVANZAR");
-	} else {
-		*estado_piernas = STATE_STOP;
+	} else if (valor_pid > 0) {
+		*estado_piernas = STATE_TURN_RIGHT;
 		*actualizar_piernas = true;
-		LOGGER_INFO("PARAR");
+		LOGGER_INFO("GIRAR DER");
 	}
+}
+
+float calcular_pid(bool ojos[]) {
+	float proporcional = 0,
+			integral = 0,
+			diferencial = 0;
+
+	float sensores[] = {
+			-2 * ojos[0],
+			-1 * ojos[1],
+			 1 * ojos[2],
+			 2 * ojos[3]
+	};
+	float tam_sensores = 4;
+
+	/* Control proporcional */
+	for (size_t i = 0; i < tam_sensores; i++)
+		proporcional += sensores[i];
+
+	integral = 0;
+	diferencial = 0;
+
+	float k_prop = 1, k_inte = 0.1, k_dif = 0.1;
+	return k_prop * proporcional +
+			k_inte * integral +
+			k_dif * diferencial;
 }
 
 /********************** end of file ******************************************/

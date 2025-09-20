@@ -108,6 +108,8 @@ void task_piernas_update(void *parameters)
 	if (!parametros->actualizar_piernas)
 		return;
 
+	parametros->actualizar_piernas = false;
+
 	switch (parametros->estado_piernas) {
 		case STATE_FORWARD:
 			pierna_girar_contrareloj(LEFT);
