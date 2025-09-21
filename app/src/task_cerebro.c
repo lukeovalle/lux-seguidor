@@ -54,9 +54,14 @@
 
 /********************** internal functions declaration ***********************/
 float calcular_pid(bool ojos[]);
+float calcular_error(bool ojos[]);
+float calcular_dt(void);
 
 /********************** internal data definition *****************************/
 const char *p_task_c 		= "Task Cerebro";
+static float acum_integral_error = 0; /* acumulo la integral del error */
+static float prev_error = 0; /* guardo el último error */
+static float prev_t;
 
 /********************** external data declaration ****************************/
 
@@ -72,6 +77,8 @@ void task_cerebro_init(void *parameters)
 
 	shared_data->estado_piernas = STATE_STOP;
 	shared_data->actualizar_piernas = false;
+
+    prev_t = cycle_counter_get_time_us();
 }
 
 void task_cerebro_update(void *parameters)
@@ -101,9 +108,35 @@ void task_cerebro_update(void *parameters)
 }
 
 float calcular_pid(bool ojos[]) {
-	float proporcional = 0,
-			integral = 0,
-			diferencial = 0;
+    float k_prop = 1,
+          k_inte = 0.1,
+          k_dif = 0.1;
+
+    float dt = 0.1; /* TODO: obcener el dt */
+
+    float error = calcular_error(ojos);
+
+    /* Calculo la parte proporcional */
+	float proporcional = k_prop * error;
+
+    /* Calculo la parte integral */
+    acum_integral_error += error * dt;
+	float integral = k_inte * acum_integral_error;
+
+    /* Calculo la parte diferencial */
+    float de_dt = (error - prev_error) / dt;
+	float diferencial = k_dif * de_dt;
+
+    prev_error = error;
+
+    return proporcional + integral + diferencial;
+}
+
+float calcular_error(bool ojos[]) {
+    /* Tomo 0 como setpoint, valores negativos son izquierda y positivos
+     * derecha */
+
+    //float error = 0;
 
 	float sensores[] = {
 			-2 * ojos[0],
@@ -111,19 +144,28 @@ float calcular_pid(bool ojos[]) {
 			 1 * ojos[2],
 			 2 * ojos[3]
 	};
-	float tam_sensores = 4;
+	uint8_t tam_sensores = sizeof(sensores) / sizeof(*sensores);
 
-	/* Control proporcional */
-	for (size_t i = 0; i < tam_sensores; i++)
-		proporcional += sensores[i];
+    /* devuelvo el primer valor leído que encuentro. capaz podría ver si se 
+     * activan dos sensores contiguos a la vez y tomar el promedio */
+    for (uint8_t i = 0; i < tam_sensores; i++)
+        if (sensores[i])
+            return sensores[i];
 
-	integral = 0;
-	diferencial = 0;
+    /* si no se encontraron sensores activos, devuelvo el error de la última
+     * lectura */
+    return prev_error;
+}
 
-	float k_prop = 1, k_inte = 0.1, k_dif = 0.1;
-	return k_prop * proporcional +
-			k_inte * integral +
-			k_dif * diferencial;
+float calcular_dt(void) {
+    float actual_t = cycle_counter_get_time_us();
+
+    if (actual_t < prev_t) { /* hubo overflow */
+        float max_t = UINT32_MAX / (SystemCoreClock / 1e6);
+        actual_t += max_t;
+    }
+
+    return actual_t - prev_t;
 }
 
 /********************** end of file ******************************************/
