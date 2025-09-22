@@ -47,6 +47,8 @@
 #include "board.h"
 #include "app.h"
 
+#include <math.h>
+
 /********************** macros and definitions *******************************/
 
 
@@ -90,7 +92,9 @@ void task_cerebro_update(void *parameters)
 	bool * actualizar_piernas = &shared_data->actualizar_piernas;
 
 	float valor_pid = calcular_pid(ojos);
-	LOGGER_INFO("PID = %f", valor_pid);
+    int32_t pid_entero = (int32_t) valor_pid;
+    int32_t pid_decimal = (int32_t) ((valor_pid - pid_entero) * 100);
+	LOGGER_INFO("PID = %li.%li", pid_entero, pid_decimal);
 
 	if (valor_pid < 0) {
 		*estado_piernas = STATE_TURN_LEFT;
@@ -108,11 +112,11 @@ void task_cerebro_update(void *parameters)
 }
 
 float calcular_pid(bool ojos[]) {
-    float k_prop = 1,
+    const float k_prop = 1,
           k_inte = 0.1,
           k_dif = 0.1;
 
-    float dt = 0.1; /* TODO: obcener el dt */
+    float dt = calcular_dt();
 
     float error = calcular_error(ojos);
 
@@ -136,7 +140,7 @@ float calcular_error(bool ojos[]) {
     /* Tomo 0 como setpoint, valores negativos son izquierda y positivos
      * derecha */
 
-    //float error = 0;
+    float error = 0;
 
 	float sensores[] = {
 			-2 * ojos[0],
@@ -146,26 +150,37 @@ float calcular_error(bool ojos[]) {
 	};
 	uint8_t tam_sensores = sizeof(sensores) / sizeof(*sensores);
 
-    /* devuelvo el primer valor leído que encuentro. capaz podría ver si se 
-     * activan dos sensores contiguos a la vez y tomar el promedio */
-    for (uint8_t i = 0; i < tam_sensores; i++)
-        if (sensores[i])
-            return sensores[i];
+    /* Calculo el error como el promedio del valor de todos los sensores.
+     * Si hay sensores contiguos activos, se promedian. Asumo que  no se van a
+     * activar sensores que no sean contiguos pero no importa. */
+    uint8_t sensores_activados = 0;
+    for (uint8_t i = 0; i < tam_sensores; i++) {
+        if (!sensores[i])
+            continue;
+
+        error += sensores[i];
+        sensores_activados++;
+    }
 
     /* si no se encontraron sensores activos, devuelvo el error de la última
      * lectura */
-    return prev_error;
+    if (!sensores_activados)
+        return prev_error;
+
+    return error/sensores_activados;
 }
 
 float calcular_dt(void) {
     float actual_t = cycle_counter_get_time_us();
 
-    if (actual_t < prev_t) { /* hubo overflow */
-        float max_t = UINT32_MAX / (SystemCoreClock / 1e6);
-        actual_t += max_t;
-    }
+    float max_t = UINT32_MAX / (SystemCoreClock / 1e6);
+    if (actual_t < prev_t) /* hubo overflow */
+            actual_t += max_t;
 
-    return actual_t - prev_t;
+    float dt = (actual_t - prev_t) * 1e6;
+    prev_t = remainder(actual_t, max_t);
+
+    return dt;
 }
 
 /********************** end of file ******************************************/
