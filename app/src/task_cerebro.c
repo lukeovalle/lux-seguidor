@@ -47,6 +47,7 @@
 #include "board.h"
 #include "app.h"
 
+#include <float.h>
 #include <math.h>
 
 /********************** macros and definitions *******************************/
@@ -64,13 +65,12 @@ const char *p_task_c 		= "Task Cerebro";
 static float acum_integral_error = 0; /* acumulo la integral del error */
 static float prev_error = 0; /* guardo el último error */
 static float prev_t;
-
+static uint16_t contador_impresion = 0;
 /********************** external data declaration ****************************/
 
 
 /********************** external functions definition ************************/
-void task_cerebro_init(void *parameters)
-{
+void task_cerebro_init(void *parameters) {
 	/* Print out: Task Initialized */
 	LOGGER_INFO(" ");
 	LOGGER_INFO("  %s is running - %s", GET_NAME(task_c_init), p_task_c);
@@ -83,8 +83,7 @@ void task_cerebro_init(void *parameters)
     prev_t = cycle_counter_get_time_us();
 }
 
-void task_cerebro_update(void *parameters)
-{
+void task_cerebro_update(void *parameters) {
 	shared_data_type * shared_data = (shared_data_type *) parameters;
 
 	bool * ojos = shared_data->ojos;
@@ -92,22 +91,25 @@ void task_cerebro_update(void *parameters)
 	bool * actualizar_piernas = &shared_data->actualizar_piernas;
 
 	float valor_pid = calcular_pid(ojos);
-    int32_t pid_entero = (int32_t) valor_pid;
-    int32_t pid_decimal = (int32_t) ((valor_pid - pid_entero) * 100);
-	LOGGER_INFO("PID = %li.%li", pid_entero, pid_decimal);
+
+	if (contador_impresion == 200) {
+		int32_t pid_entero = (int32_t) valor_pid;
+		int32_t pid_decimal = (int32_t) ((valor_pid - pid_entero) * 100);
+		LOGGER_INFO("PID = %li.%li", pid_entero, pid_decimal);
+
+		contador_impresion = 0;
+	}
+	contador_impresion++;
 
 	if (valor_pid < 0) {
 		*estado_piernas = STATE_TURN_LEFT;
 		*actualizar_piernas = true;
-		LOGGER_INFO("GIRAR IZQ");
 	} else if (valor_pid == 0) {
 		*estado_piernas = STATE_FORWARD;
 		*actualizar_piernas = true;
-		LOGGER_INFO("AVANZAR");
 	} else if (valor_pid > 0) {
 		*estado_piernas = STATE_TURN_RIGHT;
 		*actualizar_piernas = true;
-		LOGGER_INFO("GIRAR DER");
 	}
 }
 
@@ -173,11 +175,12 @@ float calcular_error(bool ojos[]) {
 float calcular_dt(void) {
     float actual_t = cycle_counter_get_time_us();
 
-    float max_t = UINT32_MAX / (SystemCoreClock / 1e6);
+    float max_t = UINT32_MAX / (SystemCoreClock * 1e-6);
     if (actual_t < prev_t) /* hubo overflow */
             actual_t += max_t;
 
     float dt = (actual_t - prev_t) * 1e6;
+    dt = fabs(dt) + FLT_MIN;
     prev_t = remainder(actual_t, max_t);
 
     return dt;
