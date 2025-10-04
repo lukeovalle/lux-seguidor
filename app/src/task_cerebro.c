@@ -124,8 +124,8 @@ void task_cerebro_update(void *parameters) {
 
 float calcular_pid(bool ojos[]) {
     const float k_prop = 1,
-          k_inte = 0.8,
-          k_dif = 0.8;
+          k_inte = 0.1,
+          k_dif = 0.1;
 
     float dt = calcular_dt();
 
