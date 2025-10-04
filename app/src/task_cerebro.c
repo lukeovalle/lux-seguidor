@@ -66,6 +66,7 @@ static float acum_integral_error = 0; /* acumulo la integral del error */
 static float prev_error = 0; /* guardo el último error */
 static float prev_t;
 static uint16_t contador_impresion = 0;
+static float prev_pid = 0;
 /********************** external data declaration ****************************/
 
 
@@ -91,7 +92,15 @@ void task_cerebro_update(void *parameters) {
 	bool * actualizar_piernas = &shared_data->actualizar_piernas;
 
 	float valor_pid = calcular_pid(ojos);
-
+/*
+	if (valor_pid != prev_pid) {
+		int32_t pid_entero = (int32_t) valor_pid;
+		int32_t pid_decimal = (int32_t) ((valor_pid - pid_entero) * 100);
+		LOGGER_INFO("cambio de PID = %li.%li", pid_entero, pid_decimal);
+	}
+*/
+	prev_pid = valor_pid;
+/*
 	if (contador_impresion == 200) {
 		int32_t pid_entero = (int32_t) valor_pid;
 		int32_t pid_decimal = (int32_t) ((valor_pid - pid_entero) * 100);
@@ -100,7 +109,7 @@ void task_cerebro_update(void *parameters) {
 		contador_impresion = 0;
 	}
 	contador_impresion++;
-
+*/
 	if (valor_pid < 0) {
 		*estado_piernas = STATE_TURN_LEFT;
 		*actualizar_piernas = true;
@@ -115,8 +124,8 @@ void task_cerebro_update(void *parameters) {
 
 float calcular_pid(bool ojos[]) {
     const float k_prop = 1,
-          k_inte = 0.1,
-          k_dif = 0.1;
+          k_inte = 0.8,
+          k_dif = 0.8;
 
     float dt = calcular_dt();
 
@@ -127,6 +136,9 @@ float calcular_pid(bool ojos[]) {
 
     /* Calculo la parte integral */
     acum_integral_error += error * dt;
+    /* Me aseguro de que el número no explote */
+    acum_integral_error = fmin(acum_integral_error, 1e3);
+    acum_integral_error = fmax(acum_integral_error, -1e3);
 	float integral = k_inte * acum_integral_error;
 
     /* Calculo la parte diferencial */
