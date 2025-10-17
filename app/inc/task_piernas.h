@@ -49,12 +49,22 @@ extern "C" {
 
 /********************** typedef **********************************************/
 typedef enum {
-	STATE_STOP = 0,
-	STATE_FORWARD,
-	STATE_TURN_LEFT,
-	STATE_TURN_RIGHT,
-	STATE_BACKWARDS
-} piernas_state_t;
+	ST_MOTOR_STOP = 0,
+	ST_MOTOR_RUNNING,
+	ST_MOTOR_CHANGE_SPEED
+} task_piernas_st_t;
+
+typedef enum {
+	EV_NOTOR_NONE = 0,
+	EV_MOTOR_DIR_CHANGE
+} task_piernas_ev_t;
+
+typedef struct {
+	uint32_t			tick;
+	task_piernas_st_t	state;
+	task_piernas_ev_t	event;
+	bool				update_flag;
+} task_piernas_data_t;
 
 /********************** external data declaration ****************************/
 extern uint32_t g_task_b_cnt;

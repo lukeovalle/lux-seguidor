@@ -48,13 +48,13 @@
 #include "app.h"
 
 /********************** macros and definitions *******************************/
-#define G_TASK_B_CNT_INI	0ul
+#define G_TASK_PIERNAS_CNT_INI	0ul
 
-#define TASK_B_CNT_INI		0ul
-#define TASK_B_CNT_MAX		50ul
+#define TASK_PIERNAS_CNT_INI		0ul
+#define TASK_PIERNAS_CNT_MAX		50ul
 
-#define TASK_B_DEL_INI		0ul
-#define TASK_B_DEL_MAX		500ul
+#define TASK_PIERNAS_DEL_INI		0ul
+#define TASK_PIERNAS_DEL_MAX		500ul
 
 /********************** internal data declaration ****************************/
 typedef struct {
@@ -64,6 +64,13 @@ typedef struct {
 
 typedef enum { LEFT = 0, RIGHT = 1 } direction_t;
 
+task_piernas_data_t task_piernas_data = {
+		.tick = TASK_PIERNAS_DEL_INI,
+		.state = ST_MOTOR_STOP,
+		.event = EV_MOTOR_NONE,
+		.update_flag = 0
+};
+
 /********************** internal functions declaration ***********************/
 void pierna_girar_reloj(direction_t dir);
 void pierna_girar_contrareloj(direction_t dir);
@@ -71,11 +78,18 @@ void pierna_parar(direction_t dir);
 
 /********************** internal data definition *****************************/
 const char *p_task_b 		= "Task B - Non-Blocking Code";
-motor_t piernas[] = {
+/*motor_t piernas[] = {
 		{.puerto1 = motor1_1_GPIO_Port, .puerto2 = motor1_2_GPIO_Port,
 				.pin1 = motor1_1_Pin, .pin2 = motor1_2_Pin},
 		{.puerto1 = motor2_1_GPIO_Port, .puerto2 = motor2_2_GPIO_Port,
 				.pin1 = motor2_1_Pin, .pin2 = motor2_2_Pin}
+};*/
+
+motor_t piernas[] = {
+		{.puerto1 = 1, .puerto2 = 1,
+				.pin1 = 1, .pin2 = 1},
+		{.puerto1 = 1, .puerto2 = 1,
+				.pin1 = 1, .pin2 = 1}
 };
 
 #define PIERNAS_QTY (sizeof(piernas) / sizeof(motor_t))
@@ -97,7 +111,7 @@ void task_piernas_init(void *parameters)
 	shared_data_type * parametros = (shared_data_type *) parameters;
 
 	parametros->actualizar_piernas = true;
-	parametros->estado_piernas = STATE_FORWARD;
+	parametros->estado_piernas = ST_MOTOR_STOP;
 
 }
 
@@ -111,25 +125,17 @@ void task_piernas_update(void *parameters)
 	parametros->actualizar_piernas = false;
 
 	switch (parametros->estado_piernas) {
-		case STATE_FORWARD:
+		case ST_MOTOR_STOP:
 			pierna_girar_contrareloj(LEFT);
 			pierna_girar_contrareloj(RIGHT);
 			break;
-		case STATE_BACKWARDS:
+		case ST_MOTOR_CHANGE_SPEED:
 			pierna_girar_reloj(LEFT);
 			pierna_girar_reloj(RIGHT);
 			break;
-		case STATE_TURN_LEFT:
+		case ST_MOTOR_RUNNING:
 			pierna_parar(LEFT);
 			pierna_girar_contrareloj(RIGHT);
-			break;
-		case STATE_TURN_RIGHT:
-			pierna_girar_contrareloj(LEFT);
-			pierna_parar(RIGHT);
-			break;
-		case STATE_STOP:
-			pierna_parar(LEFT);
-			pierna_parar(RIGHT);
 			break;
 		default:
 			break;
